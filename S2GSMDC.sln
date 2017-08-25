@@ -1,6 +1,8 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.10
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "S2GSMDC", "S2GSMDC\S2GSMDC.csproj", "{7A919AE2-4717-4CF9-BAFE-5AB6E8D78621}"
 EndProject
 Global
@@ -13,6 +15,12 @@ Global
 		{7A919AE2-4717-4CF9-BAFE-5AB6E8D78621}.Debug|x86.Build.0 = Debug|x86
 		{7A919AE2-4717-4CF9-BAFE-5AB6E8D78621}.Release|x86.ActiveCfg = Release|x86
 		{7A919AE2-4717-4CF9-BAFE-5AB6E8D78621}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8AA42A67-C1F3-4EDC-A100-86D727F7EF07}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		StartupItem = S2GSMDC\S2GSMDC.csproj
