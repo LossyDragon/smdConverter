@@ -22,6 +22,7 @@ namespace S2GSMDC
             Console.WriteLine("Blender: {0}", Success.BlenSuccess);
             Console.WriteLine("Maya Mesa: {0}", Success.MesaSuccess);
             Console.WriteLine("Decimal Coversion: {0}", Success.DecimalPointSuccess);
+            Console.WriteLine("Sci notation Conversion: {0}", Success.SciNoteSuccess);
 
             Console.WriteLine("All files converted.\nPress any key to exit.");
             Console.Read();
@@ -31,6 +32,7 @@ namespace S2GSMDC
         {
             public static bool BlenSuccess { get; set; }
             public static bool MesaSuccess { get; set; }
+            public static bool SciNoteSuccess { get; set; }
             public static bool DecimalPointSuccess { get; set; }
         }
 
@@ -38,7 +40,10 @@ namespace S2GSMDC
         {
 
             String BlenderRegex = @"\d+(?<vertex> +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+) +\d+ +(?<bone>\d+) +-?\d+\.\d+";
-            String MesaRegex = @"\d+(?<vertex> +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+) +\d+ +(?<bone>\d+) +-?\d+";
+            String MesaRegex    = @"\d+(?<vertex> +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+) +\d+ +(?<bone>\d+) +-?\d+";
+            String OnlyNumbers  = @"^\d+$";
+            String isSciNote    = @"^[+-?\d][e|E][-][0-9]+$";
+
             bool triangle = false;
             Match match;
 
@@ -78,12 +83,13 @@ namespace S2GSMDC
                                     }
 
                                 }
-                                //Decimal point modification
+                                //Decimal point & Sci Notation modification
                                 //TODO: Could this be Regex'ed??
                                 /**
                                  *                                                       (Not Decimal)
                                  * Example: 0 -7.43246 -47.64437 280.3624 -0.99999 0.00000 0000000 0.94172 0.82541 1 7 1
                                  * */
+                                //Dont touch anything above a line that states "triangles"
                                 match = Regex.Match(line, @"(triangles)");
                                 {
                                     if (match.Success)
@@ -98,17 +104,32 @@ namespace S2GSMDC
                                     //Parse through that string array we made. 
                                     for (int i = 0; i < tempArray.Length; i++)
                                     {
-                                        //If array [i] is greater than 6 characters AND NOT containing a decimal, proceed. 
                                         if (tempArray[i].Length > 6 && !(tempArray[i].Contains(hasDecimal)))
                                         {
-                                            //Regex bool to make sure we're dealing with ONLY NUMBERS.
-                                            bool containsNum = Regex.IsMatch(tempArray[i], @"\d");
-
-                                            //If that line is only numbers, lets put a decimal after the first digit. 
-                                            if (containsNum)
+                                            match = Regex.Match(tempArray[i], OnlyNumbers);
                                             {
-                                                tempArray[i] = tempArray[i].Insert(1, hasDecimal);
+                                                if (match.Success)
+                                                {
+                                                    tempArray[i] = tempArray[i].Insert(1, hasDecimal);
+                                                    Success.DecimalPointSuccess = true;
+                                                }
+                                            }
+                                        }
+                                    }
 
+
+                                    //Before we join the string array, lets check for Sci-Notation
+                                    //Example:  0 -53.39532 1.e-00500 13.03102 -0.62235 0.000000 0.78273 0.22154 0.76860 1 0 1
+                                    //Note:     Based on the control files I'm testing, 1e-00500 is close enough to 0.000000...
+                                    //TODO:     This needs SEVERE validation. 
+                                    for (int i = 0; i < tempArray.Length; i++)
+                                    {
+                                        match = Regex.Match(tempArray[i], isSciNote);
+                                        {
+                                            if (match.Success)
+                                            {
+                                                tempArray[i] = tempArray[i].Replace(tempArray[i], "0.000000");
+                                                Success.SciNoteSuccess = true;
                                             }
                                         }
                                     }
@@ -121,12 +142,9 @@ namespace S2GSMDC
                                         if (match.Success)
                                         {
                                             line = match.Groups["bone"].Value + match.Groups["vertex"].Value;
-                                            Success.DecimalPointSuccess = true;
                                         }
                                     }
                                 }
-
-                                //SciNotation bypass.
 
                                 //A line couldnt be parsed, was it something uneeded?
 
