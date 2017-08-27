@@ -155,6 +155,7 @@ namespace S2GSMDC
                                         }
                                     }
                                 }
+                                w.WriteLine(line);  //Write the new line. 
                             }
                             catch (Exception e) //There shouldn't be issues, but if there is, catch so we don't crash
                             {
@@ -162,9 +163,8 @@ namespace S2GSMDC
                                 Console.WriteLine("At: " + line.ToString());
                                 Console.WriteLine("Press any key to exit.");
                                 Environment.Exit(0);
-
+                                break;  //Break out of loop if there's an issue. 
                             }
-                            w.WriteLine(line);  //Write the new line. 
                         }
                         w.Close();  //Close StreamWriter
                     }
