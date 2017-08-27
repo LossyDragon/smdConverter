@@ -4,8 +4,8 @@ using System.Runtime.CompilerServices;
 // Information about this assembly is defined by the following attributes. 
 // Change them to the values specific to your project.
 
-[assembly: AssemblyTitle("S2GSMDC")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("S2GSMDC2")]
+[assembly: AssemblyDescription("Source to Goldsrc SMD Converter with Blender and MESA support.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("")]

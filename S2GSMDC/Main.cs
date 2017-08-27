@@ -27,6 +27,7 @@ namespace S2GSMDC
         {
             public static bool BlenSuccess { get; set; }
             public static bool MesaSuccess { get; set; }
+            public static bool BmpSuccess { get; set; }
             public static bool SciNotaSuccess { get; set; }
             public static bool DecimalPointSuccess { get; set; }
         }
@@ -38,6 +39,7 @@ namespace S2GSMDC
             public static String MesaRegex = @"\d+(?<vertex> +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+) +\d+ +(?<bone>\d+) +-?\d+";
             public static String OnlyNumbers = @"^\d+$";
             public static String isSciNota = @"^[+-?\d][e|E][-][0-9]+$";
+            public static String isTGA = @"(.tga)";
         }
         
         //Seperate function to show some output if multiple files are used.
@@ -45,6 +47,7 @@ namespace S2GSMDC
         {
             Console.WriteLine("Methods tried for conversion.");
             Console.WriteLine("Blender: {0}", Success.BlenSuccess);
+            Console.WriteLine("TGA to BMP: {0}", Success.BmpSuccess);
             Console.WriteLine("Maya Mesa: {0}", Success.MesaSuccess);
             Console.WriteLine("Decimal Coversion: {0}", Success.DecimalPointSuccess);
             Console.WriteLine("Sci notation Conversion: {0}\n", Success.SciNotaSuccess);
@@ -103,6 +106,17 @@ namespace S2GSMDC
                                         triangle = true;
                                 }
 
+                                match = Regex.Match(line, Boolean.isTGA);
+                                {
+                                    if (match.Success)
+                                    {
+                                        string[] tga2bmp = line.Split('.');
+                                        tga2bmp[1] = "bmp";
+                                        line = string.Join(" ", tga2bmp);
+                                        Success.BmpSuccess = true;
+                                    }
+                                }
+
                                 /**
                                  * Example: 0 -7.43246 -47.64437 280.3624 -0.99999 0.00000 0000000 0.94172 0.82541 1 7 1
                                  **/
@@ -159,11 +173,12 @@ namespace S2GSMDC
                             }
                             catch (Exception e) //There shouldn't be issues, but if there is, catch so we don't crash
                             {
+                                Console.WriteLine("Uh-oh, something went wrong!");
                                 Console.WriteLine(e);
                                 Console.WriteLine("At: " + line.ToString());
                                 Console.WriteLine("Press any key to exit.");
+                                Console.Read();
                                 Environment.Exit(0);
-                                break;  //Break out of loop if there's an issue. 
                             }
                         }
                         w.Close();  //Close StreamWriter
