@@ -112,7 +112,7 @@ namespace S2GSMDC
                                     {
                                         string[] tga2bmp = line.Split('.');
                                         tga2bmp[1] = "bmp";
-                                        line = string.Join(" ", tga2bmp);
+                                        line = string.Join(".", tga2bmp);
                                         Success.BmpSuccess = true;
                                     }
                                 }
