@@ -14,10 +14,8 @@ namespace S2GSMDC
                 Console.Read();
             }
             else
-            {
                 ParseArgs(args);
-            }
-
+            
             Console.WriteLine("All files converted.\nPress any key to exit.");
             Console.Read();
         }
@@ -37,9 +35,9 @@ namespace S2GSMDC
         {
             public static String BlenderRegex = @"\d+(?<vertex> +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+) +\d+ +(?<bone>\d+) +-?\d+\.\d+";
             public static String MesaRegex = @"\d+(?<vertex> +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+) +\d+ +(?<bone>\d+) +-?\d+";
-            public static String OnlyNumbers = @"^\d+$";
-            public static String isSciNota = @"^[+-?\d][e|E][-][0-9]+$";
-            public static String isTGA = @"(.tga)";
+            public static String AllZeros = @"^00+$";
+            public static String isSciNota = @"^(?<posORneg>(-|\+)?)(?<num>\d+)(\.|)[e|E]-[0-9]+$"; //Old 2:^+-?\d[e|E]-[0-9]+$ Old:^[+-?\d][e|E][-][0-9]+$
+            public static String isTGA = @"(?<texture>[^\s]+\.)(tga|TGA)+$";
         }
         
         //Seperate function to show some output if multiple files are used.
@@ -53,13 +51,53 @@ namespace S2GSMDC
             Console.WriteLine("Sci notation Conversion: {0}\n", Success.SciNotaSuccess);
         }
 
-        static void ParseArgs(string[] argFile)
+        //Seperate function to parse lines that contain "0000000" (All Zeros) or "1.e-00500" (Sci Notation)
+        static string Refinement(string selection)
         {
-            foreach (string file in argFile)
+            //Some strings from MESA are quirky, below will split 'selection' and address them individually.
+            Match match;
+            string[] tempArray = selection.Split(' ');
+
+            for (int i = 0; i < tempArray.Length; i++)
+            {
+                //Some lines have "All Zeros", below will place a decimal after the first 0. 
+                //Ex: 0 -7.43246 -47.64437 280.3624 -0.99999 0.00000 0000000 0.94172 0.82541 1 7
+                //Outcome Ex:                                        0.000000
+                match = Regex.Match(tempArray[i], Boolean.AllZeros);
+                {
+                    if (match.Success)
+                    {
+                        tempArray[i] = tempArray[i].Insert(1, ".");
+                        Success.DecimalPointSuccess = true;
+                    }
+                }
+
+                //Some lines have a wierd Scientific Notation format, but they do mean something. Read Ex.
+                //Ex:  0 -53.39532 1.e-00500 13.03102 -0.62235 0.000000 0.78273 0.22154 0.76860 1 0 1
+                //Outcome Ex: 1e-00500 = 0.000010, -4e-00500 = -0.000040, -2e-00500 = -0.000020, (OR 1.e-00500 = 0.000010, etc)
+                //TODO: This does not find Sci Nota values that are double digit ("-11e-00500").
+                match = Regex.Match(tempArray[i], Boolean.isSciNota);
+                {
+                    if (match.Success)
+                    {
+                        tempArray[i] = match.Groups["posORneg"].Value + "0.0000" + match.Groups["num"].Value + "0"; //h...HACK? :o
+                        Success.SciNotaSuccess = true;
+                    }
+                }
+            }
+
+            //Combine 'tempArray' and return it back home.
+            string refined = string.Join(" ", tempArray);
+            return refined;
+        }
+
+        static void ParseArgs(string[] args)
+        {
+            foreach (string file in args)
             {
                 Console.WriteLine("Opening \"{0}\" for conversion...\n", file);
 
-                //Reset variables with each file.
+                //Reset variables with each file in args.
                 bool triangle = false;
                 Success.BlenSuccess = false;
                 Success.MesaSuccess = false;
@@ -79,26 +117,6 @@ namespace S2GSMDC
                         {
                             try
                             {
-                                //Blender Source Tools 2.4.0 attempt
-                                match = Regex.Match(line, Boolean.BlenderRegex);
-                                {
-                                    if(match.Success)
-                                    {
-                                        line = match.Groups["bone"].Value + match.Groups["vertex"].Value;
-                                        Success.BlenSuccess = true;
-                                    }
-                                }
-                                //Maya MESA v2.1 attempt
-                                match = Regex.Match(line, Boolean.MesaRegex);
-                                {
-                                    if (match.Success)
-                                    {
-                                        line = match.Groups["bone"].Value + match.Groups["vertex"].Value;
-                                        Success.MesaSuccess = true;
-                                    }
-                                }
-
-                                //Decimal point & Sci Notation modification
                                 //Dont toucn any lines before "triangles".
                                 match = Regex.Match(line, @"(triangles)");
                                 {
@@ -106,77 +124,55 @@ namespace S2GSMDC
                                         triangle = true;
                                 }
 
-                                match = Regex.Match(line, Boolean.isTGA);
+                                if (triangle)
                                 {
-                                    if (match.Success)
+                                    //TGA to BMP
+                                    match = Regex.Match(line, Boolean.isTGA);
                                     {
-                                        string[] tga2bmp = line.Split('.');
-                                        tga2bmp[1] = "bmp";
-                                        line = string.Join(".", tga2bmp);
-                                        Success.BmpSuccess = true;
-                                    }
-                                }
-
-                                /**
-                                 * Example: 0 -7.43246 -47.64437 280.3624 -0.99999 0.00000 0000000 0.94172 0.82541 1 7 1
-                                 **/
-                                if (triangle)                               //TODO: Could this be Regex'ed??
-                                {
-                                    string[] tempArray = line.Split(' ');   //Split that line into a string array.
-                                    string hasDecimal = ".";                //Placeholder
-
-                                    //Parse through that string array we made. 
-                                    for (int i = 0; i < tempArray.Length; i++)
-                                    {
-                                        if (tempArray[i].Length > 6 && !(tempArray[i].Contains(hasDecimal)))
+                                        if (match.Success)
                                         {
-                                            match = Regex.Match(tempArray[i], Boolean.OnlyNumbers);
-                                            {
-                                                if (match.Success)
-                                                {
-                                                    tempArray[i] = tempArray[i].Insert(1, hasDecimal);
-                                                    Success.DecimalPointSuccess = true;
-                                                }
-                                            }
+                                            line = match.Groups["texture"] + "bmp";
+                                            Success.BmpSuccess = true;
                                         }
                                     }
 
-                                    //Before we join the string array, lets check for Sci-Notation
-                                    //Example:  0 -53.39532 1.e-00500 13.03102 -0.62235 0.000000 0.78273 0.22154 0.76860 1 0 1
-                                    //Note:     Based on the control during testing, "1e-00500" is close enough to "0.000000".
-                                    //TODO:     Needs more testing with more files.
-                                    for (int i = 0; i < tempArray.Length; i++)
+
+                                    //Blender Source Tools 2.4.0 attempt
+                                    //Ex: 0 1.887930 -53.549610 328.655060 -0.043270 -0.994390 -0.096420 0.820470 0.854180 1 7 1.000000
+                                    match = Regex.Match(line, Boolean.BlenderRegex);
                                     {
-                                        match = Regex.Match(tempArray[i], Boolean.isSciNota);
+                                        if (match.Success)
                                         {
-                                            if (match.Success)
-                                            {
-                                                tempArray[i] = tempArray[i].Replace(tempArray[i], "0.000000");//Hack
-                                                Success.SciNotaSuccess = true;
-                                            }
+                                            line = match.Groups["bone"].Value + match.Groups["vertex"].Value;
+                                            Success.BlenSuccess = true;
                                         }
                                     }
 
-                                    //Combine that string array into the string streamwriter is working with.
-                                    line = string.Join(" ", tempArray);
-
-                                    //Double check the modification to see if it meets spec. 
+                                    //Maya MESA v2.1 attempt
+                                    //Ex: 0 -7.43246 -47.64437 280.3624 -0.99999 0.00000 0000000 0.94172 0.82541 1 7 1
                                     match = Regex.Match(line, Boolean.MesaRegex);
                                     {
                                         if (match.Success)
                                         {
                                             line = match.Groups["bone"].Value + match.Groups["vertex"].Value;
+                                            Success.MesaSuccess = true;
+                                        }
+                                        else
+                                        {
+                                            line = Refinement(line);
+
+                                            match = Regex.Match(line, Boolean.MesaRegex);
+                                                if(match.Success)
+                                                    line = match.Groups["bone"].Value + match.Groups["vertex"].Value;
                                         }
                                     }
                                 }
                                 w.WriteLine(line);  //Write the new line. 
                             }
-                            catch (Exception e) //There shouldn't be issues, but if there is, catch so we don't crash
+                            //There shouldn't be issues, but if there is catch it so the program doesn't crash.
+                            catch (Exception e)
                             {
-                                Console.WriteLine("Uh-oh, something went wrong!");
-                                Console.WriteLine(e);
-                                Console.WriteLine("At: " + line.ToString());
-                                Console.WriteLine("Press any key to exit.");
+                                Console.WriteLine(e + "\nUh-oh, something went wrong!\nAt: {0}\nPress any key to exit.", line);
                                 Console.Read();
                                 Environment.Exit(0);
                             }
