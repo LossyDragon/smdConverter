@@ -21,7 +21,7 @@ namespace S2GSMDC
         }
 
         //Class to hold which methods an .smd file went though. 
-        static class Success
+        static class SuccessReport
         {
             public static bool UnderSpace { get; set; }
             public static bool BlenSuccess { get; set; }
@@ -33,27 +33,27 @@ namespace S2GSMDC
         }
 
         //Class to hold all the Regular Expressions (Regex)
-        static class Boolean
+        static class ProgramRules
         {
-            //^[a-zA-Z0-9_]+$
             public static String BlenderRegex = @"\d+(?<vertex> +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+) +\d+ +(?<bone>\d+) +-?\d+\.\d+";
             public static String MesaRegex = @"\d+(?<vertex> +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+) +\d+ +(?<bone>\d+) +-?\d+";
             public static String AllZeros = @"^00+$";
-            public static String isSciNota = @"^(?<posORneg>(-|\+)?)(?<num>\d+)(\.|)[e|E]-[0-9]+$"; //Old 2:^+-?\d[e|E]-[0-9]+$ Old:^[+-?\d][e|E][-][0-9]+$
-            public static String isTGA = @"(?<texture>[^\s]+\.)(tga|TGA)+$";       
+            public static String isSciNota = @"^(?<posORneg>(-|\+)?)(?<num>\d+)(\.|)[e|E]-[0-9]+$";
+            public static String isTGA = @"(?<texture>[^\s]+\.)(tga|TGA)+$"; 
+            public static String UnderScoreDetect = @"^+-?\d+ \042\w+_\w+\042 +-?\d+$"; //This should detect nodes formatting, but make sure there is an underscore between words. 
+            public static bool? ParseUnderscore { get; set; }
         }
 
         //Seperate function to show some output if multiple files are used.
         static void SuccessMessage()
         {
-            Console.WriteLine("Methods tried for conversion.");
-            
-            Console.WriteLine("Blender: {0}", Success.BlenSuccess);
-            Console.WriteLine("TGA to BMP: {0}", Success.BmpSuccess);
-            Console.WriteLine("Maya Mesa: {0}", Success.MesaSuccess);
-            Console.WriteLine("Decimal Coversion: {0}", Success.DecimalPointSuccess);
-            Console.WriteLine("Node underscore to space: {0}", Success.UnderSpaceSuccess);
-            Console.WriteLine("Sci notation Conversion: {0}\n", Success.SciNotaSuccess);
+            Console.WriteLine("Methods tried for conversion.");    
+            Console.WriteLine("Blender: {0}", SuccessReport.BlenSuccess);
+            Console.WriteLine("TGA to BMP: {0}", SuccessReport.BmpSuccess);
+            Console.WriteLine("Maya Mesa: {0}", SuccessReport.MesaSuccess);
+            Console.WriteLine("Decimal Coversion: {0}", SuccessReport.DecimalPointSuccess);
+            Console.WriteLine("Node underscore to space: {0}", SuccessReport.UnderSpaceSuccess);
+            Console.WriteLine("Sci notation Conversion: {0}\n", SuccessReport.SciNotaSuccess);
         }
 
         //Seperate function to parse lines that contain "0000000" (All Zeros) or "1.e-00500" (Sci Notation)
@@ -67,26 +67,26 @@ namespace S2GSMDC
             {
                 //Some lines have "All Zeros", below will place a decimal after the first 0. 
                 //Ex: 0 -7.43246 -47.64437 280.3624 -0.99999 0.00000 0000000 0.94172 0.82541 1 7
-                //Outcome Ex:                                        0.000000
-                match = Regex.Match(tempArray[i], Boolean.AllZeros);
+                //Outcome Ex: -------------------------------------> 0.000000
+                match = Regex.Match(tempArray[i], ProgramRules.AllZeros);
                 {
                     if (match.Success)
                     {
                         tempArray[i] = tempArray[i].Insert(1, ".");
-                        Success.DecimalPointSuccess = true;
+                        SuccessReport.DecimalPointSuccess = true;
                     }
                 }
 
                 //Some lines have a wierd Scientific Notation format, but they do mean something. Read Ex.
                 //Ex:  0 -53.39532 1.e-00500 13.03102 -0.62235 0.000000 0.78273 0.22154 0.76860 1 0 1
                 //Outcome Ex: 1e-00500 = 0.000010, -4e-00500 = -0.000040, -2e-00500 = -0.000020, (OR 1.e-00500 = 0.000010, etc)
-                //TODO: This does not find Sci Nota values that are double digit ("-11e-00500").
-                match = Regex.Match(tempArray[i], Boolean.isSciNota);
+                //TODO: This does not find Sci Nota values that are double digit, safely AFAIK. ("-11e-00500").
+                match = Regex.Match(tempArray[i], ProgramRules.isSciNota);
                 {
                     if (match.Success)
                     {
-                        tempArray[i] = match.Groups["posORneg"].Value + "0.0000" + match.Groups["num"].Value + "0"; //h...HACK? :o
-                        Success.SciNotaSuccess = true;
+                        tempArray[i] = match.Groups["posORneg"].Value + "0.0000" + match.Groups["num"].Value + "0";
+                        SuccessReport.SciNotaSuccess = true;
                     }
                 }
             }
@@ -96,19 +96,58 @@ namespace S2GSMDC
             return refined;
         }
 
-        static void ParseArgs(string[] args)
+        //Seperate function for user to select whether they want underscores (_) within node names to be replaced with spaces ( ).
+        static void UnderscoreSpaceConmfirm()
         {
+            Console.WriteLine("Underscore character found in node names." +
+                "\nReplace with spaces?" +
+                "\nNOTE: Node mismatch upon model compile may occur if set improperly!" +
+                "\nIf you dont wish to continue for now, type quit" +
+                "\nContinue with Underscore conversion? Y/N: ");
+
+            string answer = Console.ReadLine().ToLower();                   //Lowercase answer to keep things simple
+
+            if (answer.Equals("y") || answer.Equals("yes"))                 //ID10T proofing and what not.
+            {
+                ProgramRules.ParseUnderscore = true;
+            }
+            else if (answer.Equals("n") || answer.Equals("no"))
+            {
+                ProgramRules.ParseUnderscore = false;
+            }
+            else if (answer.Equals("q") || answer.Equals("quit"))           //Quit, show them a silly quirk.
+            {
+                Console.WriteLine("Quitting!" + 
+                    "\nDue to how this program is written, there will be a _converted.smd file created with 0kb." +
+                    "\nThat can be thrown in the Recyle Bin.\nPress any key to exit.");
+                Console.Read();
+                Environment.Exit(0);
+            }
+            else                                                            //Invalid answer, recursion so we know what to do. 
+            {
+                Console.WriteLine("Invalid answer. Please select an appropriate answer.\n\n\n");
+                UnderscoreSpaceConmfirm();
+            }
+                
+        }
+
+        static void ParseArgs(string[] args)
+        { 
             foreach (string file in args)
             {
+                //Set ParseUnderscore to false with each file being processed.
+                ProgramRules.ParseUnderscore = null;
+
                 Console.WriteLine("Opening \"{0}\" for conversion...\n", file);
 
                 //Reset variables with each file in args.
                 bool triangle = false;
-                Success.UnderSpace = false;
-                Success.BlenSuccess = false;
-                Success.MesaSuccess = false;
-                Success.SciNotaSuccess = false;
-                Success.DecimalPointSuccess = false;
+                SuccessReport.UnderSpace = false;
+                SuccessReport.BlenSuccess = false;
+                SuccessReport.MesaSuccess = false;
+                SuccessReport.SciNotaSuccess = false;
+                SuccessReport.DecimalPointSuccess = false;
+                SuccessReport.UnderSpaceSuccess = false;
                 Match match;
 
                 using (StreamReader r = new StreamReader(file))
@@ -124,11 +163,18 @@ namespace S2GSMDC
                             try
                             {
                                 //Node's may have an underscore instead of spaces, see if user wants to fix.
-                                match = Regex.Match(line, "\"(?<under>[^\"]*)\""); //Quotes break everything.
+                                match = Regex.Match(line, ProgramRules.UnderScoreDetect);
                                 {
-                                    if  (match.Success)
+                                    if(match.Success)
                                     {
-                                        line = line.Replace("_", " ");
+                                        if (ProgramRules.ParseUnderscore == null)
+                                            UnderscoreSpaceConmfirm();
+
+                                        if (ProgramRules.ParseUnderscore == true)
+                                        {
+                                            line = line.Replace("_", " ");
+                                            SuccessReport.UnderSpaceSuccess = true;
+                                        }
                                     }
                                 }
 
@@ -142,41 +188,39 @@ namespace S2GSMDC
                                 if (triangle)
                                 {
                                     //TGA to BMP
-                                    match = Regex.Match(line, Boolean.isTGA);
+                                    match = Regex.Match(line, ProgramRules.isTGA);
                                     {
                                         if (match.Success)
                                         {
                                             line = match.Groups["texture"] + "bmp";
-                                            Success.BmpSuccess = true;
+                                            SuccessReport.BmpSuccess = true;
                                         }
                                     }
 
-
                                     //Blender Source Tools 2.4.0 attempt
                                     //Ex: 0 1.887930 -53.549610 328.655060 -0.043270 -0.994390 -0.096420 0.820470 0.854180 1 7 1.000000
-                                    match = Regex.Match(line, Boolean.BlenderRegex);
+                                    match = Regex.Match(line, ProgramRules.BlenderRegex);
                                     {
                                         if (match.Success)
                                         {
                                             line = match.Groups["bone"].Value + match.Groups["vertex"].Value;
-                                            Success.BlenSuccess = true;
+                                            SuccessReport.BlenSuccess = true;
                                         }
                                     }
 
                                     //Maya MESA v2.1 attempt
                                     //Ex: 0 -7.43246 -47.64437 280.3624 -0.99999 0.00000 0000000 0.94172 0.82541 1 7 1
-                                    match = Regex.Match(line, Boolean.MesaRegex);
+                                    match = Regex.Match(line, ProgramRules.MesaRegex);
                                     {
                                         if (match.Success)
                                         {
                                             line = match.Groups["bone"].Value + match.Groups["vertex"].Value;
-                                            Success.MesaSuccess = true;
+                                            SuccessReport.MesaSuccess = true;
                                         }
                                         else
                                         {
                                             line = Refinement(line);
-
-                                            match = Regex.Match(line, Boolean.MesaRegex);
+                                            match = Regex.Match(line, ProgramRules.MesaRegex);
                                                 if(match.Success)
                                                     line = match.Groups["bone"].Value + match.Groups["vertex"].Value;
                                         }
