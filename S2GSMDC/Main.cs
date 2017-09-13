@@ -15,7 +15,7 @@ namespace S2GSMDC
             }
             else
                 ParseArgs(args);
-            
+
             Console.WriteLine("All files converted.\nPress any key to exit.");
             Console.Read();
         }
@@ -23,31 +23,36 @@ namespace S2GSMDC
         //Class to hold which methods an .smd file went though. 
         static class Success
         {
+            public static bool UnderSpace { get; set; }
             public static bool BlenSuccess { get; set; }
             public static bool MesaSuccess { get; set; }
             public static bool BmpSuccess { get; set; }
             public static bool SciNotaSuccess { get; set; }
             public static bool DecimalPointSuccess { get; set; }
+            public static bool UnderSpaceSuccess { get; set; }
         }
-        
+
         //Class to hold all the Regular Expressions (Regex)
         static class Boolean
         {
+            //^[a-zA-Z0-9_]+$
             public static String BlenderRegex = @"\d+(?<vertex> +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+) +\d+ +(?<bone>\d+) +-?\d+\.\d+";
             public static String MesaRegex = @"\d+(?<vertex> +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+ +-?\d+\.\d+) +\d+ +(?<bone>\d+) +-?\d+";
             public static String AllZeros = @"^00+$";
             public static String isSciNota = @"^(?<posORneg>(-|\+)?)(?<num>\d+)(\.|)[e|E]-[0-9]+$"; //Old 2:^+-?\d[e|E]-[0-9]+$ Old:^[+-?\d][e|E][-][0-9]+$
-            public static String isTGA = @"(?<texture>[^\s]+\.)(tga|TGA)+$";
+            public static String isTGA = @"(?<texture>[^\s]+\.)(tga|TGA)+$";       
         }
-        
+
         //Seperate function to show some output if multiple files are used.
         static void SuccessMessage()
         {
             Console.WriteLine("Methods tried for conversion.");
+            
             Console.WriteLine("Blender: {0}", Success.BlenSuccess);
             Console.WriteLine("TGA to BMP: {0}", Success.BmpSuccess);
             Console.WriteLine("Maya Mesa: {0}", Success.MesaSuccess);
             Console.WriteLine("Decimal Coversion: {0}", Success.DecimalPointSuccess);
+            Console.WriteLine("Node underscore to space: {0}", Success.UnderSpaceSuccess);
             Console.WriteLine("Sci notation Conversion: {0}\n", Success.SciNotaSuccess);
         }
 
@@ -99,6 +104,7 @@ namespace S2GSMDC
 
                 //Reset variables with each file in args.
                 bool triangle = false;
+                Success.UnderSpace = false;
                 Success.BlenSuccess = false;
                 Success.MesaSuccess = false;
                 Success.SciNotaSuccess = false;
@@ -117,6 +123,15 @@ namespace S2GSMDC
                         {
                             try
                             {
+                                //Node's may have an underscore instead of spaces, see if user wants to fix.
+                                match = Regex.Match(line, "\"(?<under>[^\"]*)\""); //Quotes break everything.
+                                {
+                                    if  (match.Success)
+                                    {
+                                        line = line.Replace("_", " ");
+                                    }
+                                }
+
                                 //Dont toucn any lines before "triangles".
                                 match = Regex.Match(line, @"(triangles)");
                                 {
