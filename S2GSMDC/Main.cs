@@ -99,7 +99,7 @@ namespace S2GSMDC
         //Seperate function for user to select whether they want underscores (_) within node names to be replaced with spaces ( ).
         static void UnderscoreSpaceConmfirm()
         {
-            Console.WriteLine("Underscore character found in node names." +
+            Console.Write("Underscore character found in node names." +
                 "\nReplace with spaces?" +
                 "\nNOTE: Node mismatch upon model compile may occur if set improperly!" +
                 "\nIf you dont wish to continue for now, type quit" +
@@ -119,7 +119,7 @@ namespace S2GSMDC
             {
                 Console.WriteLine("Quitting!" + 
                     "\nDue to how this program is written, there will be a _converted.smd file created with 0kb." +
-                    "\nThat can be thrown in the Recyle Bin.\nPress any key to exit.");
+                    "\nThat can be thrown in the recycle bin.\nPress any key to exit.");
                 Console.Read();
                 Environment.Exit(0);
             }
@@ -165,7 +165,7 @@ namespace S2GSMDC
                                 //Node's may have an underscore instead of spaces, see if user wants to fix.
                                 match = Regex.Match(line, ProgramRules.UnderScoreDetect);
                                 {
-                                    if(match.Success)
+                                    if (match.Success)
                                     {
                                         if (ProgramRules.ParseUnderscore == null)
                                             UnderscoreSpaceConmfirm();
